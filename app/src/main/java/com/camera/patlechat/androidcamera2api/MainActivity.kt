@@ -37,7 +37,7 @@ class MainActivity : AppCompatActivity() {
     private val mFlashSupported: Boolean = false
     private var mBackgroundHandler: Handler? = null
     private var mBackgroundThread: HandlerThread? = null
-    internal var textureListener: TextureView.SurfaceTextureListener = object : TextureView.SurfaceTextureListener {
+    private var textureListener: TextureView.SurfaceTextureListener = object : TextureView.SurfaceTextureListener {
         override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
             //open your camera here
             openCamera()
@@ -53,10 +53,10 @@ class MainActivity : AppCompatActivity() {
 
         override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
     }
-    private val stateCallback = object : CameraDevice.StateCallback() {
+    private val cameraDeviceStateCallback = object : CameraDevice.StateCallback() {
         override fun onOpened(camera: CameraDevice) {
             //This is called when the camera is open
-            Log.e(TAG, "onOpened")
+            Log.d(TAG, "onOpened")
             cameraDevice = camera
             createCameraPreview()
         }
@@ -70,12 +70,26 @@ class MainActivity : AppCompatActivity() {
             cameraDevice = null
         }
     }
-    internal val captureCallbackListener: CameraCaptureSession.CaptureCallback = object : CameraCaptureSession.CaptureCallback() {
+    private val captureCallbackListener: CameraCaptureSession.CaptureCallback = object : CameraCaptureSession.CaptureCallback() {
         override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: TotalCaptureResult) {
             super.onCaptureCompleted(session, request, result)
             Toast.makeText(this@MainActivity, "Saved:" + file!!, Toast.LENGTH_SHORT).show()
             createCameraPreview()
         }
+    }
+
+    companion object {
+        const val TAG = "MainActivity"
+        private val ORIENTATIONS = SparseIntArray()
+
+        init {
+            ORIENTATIONS.append(Surface.ROTATION_0, 90)
+            ORIENTATIONS.append(Surface.ROTATION_90, 0)
+            ORIENTATIONS.append(Surface.ROTATION_180, 270)
+            ORIENTATIONS.append(Surface.ROTATION_270, 180)
+        }
+
+        private val REQUEST_CAMERA_PERMISSION = 200
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -194,7 +208,7 @@ class MainActivity : AppCompatActivity() {
     fun createCameraPreview() {
         try {
             val texture = texture!!.surfaceTexture!!
-            texture.setDefaultBufferSize(imageDimension!!.getWidth(), imageDimension!!.getHeight())
+            texture.setDefaultBufferSize(imageDimension!!.width, imageDimension!!.height)
             val surface = Surface(texture)
             captureRequestBuilder = cameraDevice!!.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             captureRequestBuilder!!.addTarget(surface)
@@ -232,7 +246,7 @@ class MainActivity : AppCompatActivity() {
                 ActivityCompat.requestPermissions(this@MainActivity, arrayOf(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE), REQUEST_CAMERA_PERMISSION)
                 return
             }
-            manager.openCamera(cameraId!!, stateCallback, null)
+            manager.openCamera(cameraId!!, cameraDeviceStateCallback, null)
         } catch (e: CameraAccessException) {
             e.printStackTrace()
         }
@@ -290,19 +304,5 @@ class MainActivity : AppCompatActivity() {
         //closeCamera();
         stopBackgroundThread()
         super.onPause()
-    }
-
-    companion object {
-        private val TAG = "MainActivity"
-        private val ORIENTATIONS = SparseIntArray()
-
-        init {
-            ORIENTATIONS.append(Surface.ROTATION_0, 90)
-            ORIENTATIONS.append(Surface.ROTATION_90, 0)
-            ORIENTATIONS.append(Surface.ROTATION_180, 270)
-            ORIENTATIONS.append(Surface.ROTATION_270, 180)
-        }
-
-        private val REQUEST_CAMERA_PERMISSION = 200
     }
 }
